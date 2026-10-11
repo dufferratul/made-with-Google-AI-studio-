@@ -2,5 +2,7 @@
   "name": "ELEMENT BOND: Chemistry Challenge",
   "description": "Drop Elements. Build Compounds. Master Chemistry. An interactive educational chemistry game where players collect chemical elements, trigger realistic chemical bonds, and solve chemistry MCQs.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

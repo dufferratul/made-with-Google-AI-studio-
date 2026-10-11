@@ -102,6 +102,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
+        {/* Free License & Open Source Attribution */}
+        <div className="mb-5 p-3 rounded-xl bg-slate-950/50 border border-slate-800 text-xs">
+          <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5 flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>100% Free-License Art & Audio</span>
+          </div>
+          <div className="space-y-1 text-[11px] text-slate-400">
+            <div>• <strong className="text-slate-200">Audio FX:</strong> Synthesized via Web Audio API (Public Domain / MIT)</div>
+            <div>• <strong className="text-slate-200">Graphics & Molecules:</strong> Procedural Vector SVG & Canvas (MIT)</div>
+            <div>• <strong className="text-slate-200">Icons:</strong> Lucide Icons (ISC / Open Source)</div>
+            <div>• <strong className="text-slate-200">Fonts:</strong> Plus Jakarta Sans & JetBrains Mono (SIL Open Font License)</div>
+          </div>
+        </div>
+
         {/* Reset Progress Section */}
         <div className="pt-3 border-t border-slate-800">
           {!showConfirmReset ? (

@@ -1,13 +1,15 @@
 import React from 'react';
-import { PlayerStats, ScreenMode } from '../types/chemistry';
+import { Compound, PlayerStats, ScreenMode } from '../types/chemistry';
 import { sound } from '../utils/audio';
 import { LEVELS } from '../data/levels';
+import { DailyChallengeCard } from './DailyChallengeCard';
 import { Play, BookOpen, Grid, Database, HelpCircle, Settings, Trophy, Volume2, VolumeX, Sparkles, Flame } from 'lucide-react';
 
 interface MainMenuProps {
   stats: PlayerStats;
   onNavigate: (screen: ScreenMode) => void;
   onStartLevel: (levelNum: number) => void;
+  onStartDailyChallenge: (compound: Compound) => void;
   onToggleSound: () => void;
 }
 
@@ -15,6 +17,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   stats,
   onNavigate,
   onStartLevel,
+  onStartDailyChallenge,
   onToggleSound,
 }) => {
   return (
@@ -73,8 +76,14 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           Drop Elements. Build Compounds. Master Chemistry.
         </p>
 
+        {/* 24-Hour Daily Chemistry Challenge Card */}
+        <DailyChallengeCard
+          stats={stats}
+          onStartDailyChallenge={onStartDailyChallenge}
+        />
+
         {/* Level Quick Select */}
-        <div className="w-full mt-6 bg-slate-900/70 border border-slate-800 rounded-2xl p-3.5 shadow-lg">
+        <div className="w-full mt-2 bg-slate-900/70 border border-slate-800 rounded-2xl p-3.5 shadow-lg">
           <div className="flex items-center justify-between text-xs text-slate-400 mb-2 px-1">
             <span className="font-semibold text-slate-300">Select Mission Level:</span>
             <span className="font-mono text-cyan-400 font-bold">Level {stats.currentLevel}</span>

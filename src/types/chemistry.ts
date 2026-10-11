@@ -56,6 +56,11 @@ export interface Compound {
   energyCondition: string;
   mcqQuestions: MCQQuestion[];
   structureVisual: 'water' | 'nacl' | 'co2' | 'ammonia' | 'methane' | 'hcl' | 'mgo' | 'caco3' | 'co' | 'h2o2' | 'so2' | 'naoh' | 'generic';
+  // PubChem & Scientific Reference Data
+  pubchemCid?: number;
+  canonicalSmiles?: string;
+  molecularWeight?: number;
+  iupacName?: string;
 }
 
 export interface ChamberAtom {
@@ -67,6 +72,13 @@ export interface ChamberAtom {
   vy?: number;
   rotation: number;
   landed: boolean;
+}
+
+export interface DailyChallengeInfo {
+  dateKey: string; // e.g., "2026-10-11"
+  compoundId: string;
+  bonusPoints: number;
+  expiresAt: number; // timestamp
 }
 
 export interface PlayerStats {
@@ -82,6 +94,9 @@ export interface PlayerStats {
   currentStreak: number;
   highestStreak: number;
   soundEnabled: boolean;
+  // Daily Challenge Progress
+  dailyChallengeCompletedDates: string[]; // List of YYYY-MM-DD
+  dailyStreak: number;
 }
 
 export type ScreenMode =

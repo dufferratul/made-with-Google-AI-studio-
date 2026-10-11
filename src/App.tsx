@@ -4,7 +4,6 @@ import {
   ScreenMode,
   ChamberAtom,
   Compound,
-  ElementData,
 } from './types/chemistry';
 import { ELEMENTS, ELEMENT_MAP } from './data/elements';
 import { COMPOUNDS, COMPOUND_MAP } from './data/compounds';
@@ -12,11 +11,14 @@ import { LEVELS, LevelConfig } from './data/levels';
 import { evaluateChamberReactions, getNextRandomElement } from './utils/reactionEngine';
 import { loadPlayerStats, savePlayerStats, resetPlayerStats } from './utils/storage';
 import { sound } from './utils/audio';
+import { getTodayDateKey, isDailyChallengeCompleted } from './utils/dailyChallenge';
 
 import { ElementTile } from './components/ElementTile';
-import { ReactionChamber } from './components/ReactionChamber';
-import { CompoundSuccessOverlay } from './components/CompoundSuccessOverlay';
-import { MCQModal } from './components/MCQModal';
+import { ReactionChamber, FloatingText } from './components/ReactionChamber';
+import { ParticleEffect } from './components/ParticleCanvas';
+import { RecipeTargetBar } from './components/RecipeTargetBar';
+import { MoleculeVisualizer } from './components/MoleculeVisualizer';
+import { CompoundReactionModal } from './components/CompoundReactionModal';
 import { MainMenu } from './components/MainMenu';
 import { PeriodicTableModal } from './components/PeriodicTableModal';
 import { MyCompoundsModal } from './components/MyCompoundsModal';
@@ -30,27 +32,22 @@ import {
   VolumeX,
   Pause,
   Play,
-  RotateCcw,
   Home,
   Sparkles,
-  Trophy,
-  Award,
   Flame,
   ArrowDown,
-  Info,
-  Layers,
+  Repeat,
+  Zap,
 } from 'lucide-react';
 
 export default function App() {
   // --- Persistent Player Stats ---
   const [stats, setStats] = useState<PlayerStats>(() => loadPlayerStats());
 
-  // Save stats whenever updated
   useEffect(() => {
     savePlayerStats(stats);
   }, [stats]);
 
-  // Sync sound engine enabled state
   useEffect(() => {
     sound.setEnabled(stats.soundEnabled);
   }, [stats.soundEnabled]);
@@ -61,7 +58,7 @@ export default function App() {
 
   // --- Active Gameplay State ---
   const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(stats.currentLevel);
-  const currentLevelConfig = LEVELS.find(l => l.levelNumber === currentLevelNumber) || LEVELS[0];
+  const currentLevelConfig = LEVELS.find((l) => l.levelNumber === currentLevelNumber) || LEVELS[0];
 
   const [currentScore, setCurrentScore] = useState<number>(stats.totalScore);
   const [chamberAtoms, setChamberAtoms] = useState<ChamberAtom[]>([]);
@@ -73,9 +70,22 @@ export default function App() {
   const [currentElementSymbol, setCurrentElementSymbol] = useState<string>('H');
   const [nextElementSymbol, setNextElementSymbol] = useState<string>('O');
 
-  // Successful Compound & MCQ Workflow
-  const [synthesizedCompound, setSynthesizedCompound] = useState<Compound | null>(null);
-  const [activeMCQCompound, setActiveMCQCompound] = useState<Compound | null>(null);
+  // Active Target Compound ID for this level
+  const [currentTargetIndex, setCurrentTargetIndex] = useState<number>(0);
+  const [isDailyChallengeActive, setIsDailyChallengeActive] = useState<boolean>(false);
+  const [dailyChallengeTarget, setDailyChallengeTarget] = useState<Compound | null>(null);
+
+  const activeTargetCompoundId = isDailyChallengeActive && dailyChallengeTarget
+    ? dailyChallengeTarget.id
+    : currentLevelConfig.targetCompounds[
+        currentTargetIndex % currentLevelConfig.targetCompounds.length
+      ];
+
+  // Detailed compound preview modal (from tapping target bar)
+  const [inspectCompound, setInspectCompound] = useState<Compound | null>(null);
+
+  // Active reaction celebration modal
+  const [activeReactionCompound, setActiveReactionCompound] = useState<Compound | null>(null);
 
   // Level Progression tracking
   const [compoundsCreatedThisLevel, setCompoundsCreatedThisLevel] = useState<number>(0);
@@ -84,40 +94,17 @@ export default function App() {
   // Partial match hints for chamber
   const [partialHints, setPartialHints] = useState<{ compound: Compound; missing: { symbol: string; count: number }[] }[]>([]);
 
+  // Arcade Juice: Floating score texts and particle bursts
+  const [floatingScores, setFloatingScores] = useState<FloatingText[]>([]);
+  const [burstParticles, setBurstParticles] = useState<ParticleEffect[]>([]);
+  const [activeCombo, setActiveCombo] = useState<number>(1);
+  const lastReactionTimeRef = useRef<number>(0);
+
   // Prevent duplicate reaction evaluations
   const reactionLockRef = useRef<boolean>(false);
 
-  // Track animation frame for falling atom
-  const fallAnimRef = useRef<number | null>(null);
-
-  // Initialize or change levels
-  const startLevel = (lvlNum: number) => {
-    setCurrentLevelNumber(lvlNum);
-    setChamberAtoms([]);
-    setFallingAtom(null);
-    setIsDropping(false);
-    setIsPaused(false);
-    setSynthesizedCompound(null);
-    setActiveMCQCompound(null);
-    setShowLevelComplete(false);
-    setCompoundsCreatedThisLevel(0);
-    reactionLockRef.current = false;
-
-    // Pick initial elements for this level
-    const first = getNextRandomElement(lvlNum, []);
-    const second = getNextRandomElement(lvlNum, []);
-    setCurrentElementSymbol(first);
-    setNextElementSymbol(second);
-
-    // Track element as discovered
-    discoverElement(first);
-    discoverElement(second);
-
-    setScreenMode('PLAYING');
-  };
-
   const discoverElement = (symbol: string) => {
-    setStats(prev => {
+    setStats((prev) => {
       if (prev.discoveredElements.includes(symbol)) return prev;
       return {
         ...prev,
@@ -126,20 +113,136 @@ export default function App() {
     });
   };
 
-  // Switch sound toggle
-  const toggleSound = () => {
-    setStats(prev => ({ ...prev, soundEnabled: !prev.soundEnabled }));
+  // Initialize standard level
+  const startLevel = (lvlNum: number) => {
+    setIsDailyChallengeActive(false);
+    setDailyChallengeTarget(null);
+    setCurrentLevelNumber(lvlNum);
+    setCurrentTargetIndex(0);
+    setChamberAtoms([]);
+    setFallingAtom(null);
+    setIsDropping(false);
+    setIsPaused(false);
+    setActiveReactionCompound(null);
+    setShowLevelComplete(false);
+    setCompoundsCreatedThisLevel(0);
+    setFloatingScores([]);
+    setBurstParticles([]);
+    setActiveCombo(1);
+    reactionLockRef.current = false;
+
+    const first = getNextRandomElement(lvlNum, []);
+    const second = getNextRandomElement(lvlNum, []);
+    setCurrentElementSymbol(first);
+    setNextElementSymbol(second);
+
+    discoverElement(first);
+    discoverElement(second);
+
+    setScreenMode('PLAYING');
   };
 
-  // --- Falling Atom Animation & Stacking Mechanics ---
+  // Start 24-Hour Daily Chemistry Challenge
+  const startDailyChallenge = (compound: Compound) => {
+    setIsDailyChallengeActive(true);
+    setDailyChallengeTarget(compound);
+    setCurrentLevelNumber(compound.difficultyLevel || 1);
+    setChamberAtoms([]);
+    setFallingAtom(null);
+    setIsDropping(false);
+    setIsPaused(false);
+    setActiveReactionCompound(null);
+    setShowLevelComplete(false);
+    setCompoundsCreatedThisLevel(0);
+    setFloatingScores([]);
+    setBurstParticles([]);
+    setActiveCombo(1);
+    reactionLockRef.current = false;
+
+    // Seed spawner with elements required for the daily compound
+    const requiredSymbols = Object.keys(compound.requiredElements);
+    const first = requiredSymbols[0] || 'H';
+    const second = requiredSymbols[1] || requiredSymbols[0] || 'O';
+    setCurrentElementSymbol(first);
+    setNextElementSymbol(second);
+
+    discoverElement(first);
+    discoverElement(second);
+
+    sound.playLevelUp();
+    setScreenMode('PLAYING');
+  };
+
+  const toggleSound = () => {
+    setStats((prev) => ({ ...prev, soundEnabled: !prev.soundEnabled }));
+  };
+
+  // Helper to spawn floating score text
+  const addFloatingText = (text: string, x: number = 50, y: number = 50) => {
+    const id = `float-${Date.now()}-${Math.random()}`;
+    setFloatingScores((prev) => [...prev, { id, text, x, y }]);
+    setTimeout(() => {
+      setFloatingScores((prev) => prev.filter((f) => f.id !== id));
+    }, 1200);
+  };
+
+  // Helper to trigger particle burst
+  const triggerBurst = (x: number = 50, y: number = 50, color?: string) => {
+    setBurstParticles([{ x, y, color }]);
+    setTimeout(() => {
+      setBurstParticles([]);
+    }, 100);
+  };
+
+  // Element Swap Power-Up: Switch current element with next element
+  const handleSwapElements = () => {
+    if (isDropping || isPaused || activeReactionCompound || showLevelComplete) return;
+    sound.playSwap();
+    const temp = currentElementSymbol;
+    setCurrentElementSymbol(nextElementSymbol);
+    setNextElementSymbol(temp);
+    addFloatingText('🔄 Swapped!', aimPosition, 15);
+  };
+
+  // Laser Zap Power-Up: Dissolve an individual atom
+  const handleZapAtom = (atomId: string) => {
+    const atom = chamberAtoms.find((a) => a.id === atomId);
+    if (!atom) return;
+    sound.playZap();
+    triggerBurst(atom.x, atom.y, '#f43f5e');
+    addFloatingText(`⚡ Dissolved ${atom.elementSymbol}`, atom.x, atom.y);
+    setChamberAtoms((prev) => prev.filter((a) => a.id !== atomId));
+  };
+
+  // Magnet Pull Power-Up: Pulls atoms towards center of chamber
+  const handleMagnetPull = () => {
+    if (chamberAtoms.length < 2) return;
+    sound.playBondFormed();
+    addFloatingText('🧲 Magnetic Pull!', 50, 40);
+    triggerBurst(50, 70, '#38bdf8');
+    setChamberAtoms((prev) =>
+      prev.map((a) => ({
+        ...a,
+        x: a.x + (50 - a.x) * 0.45,
+      }))
+    );
+  };
+
+  // --- Falling Atom Mechanics ---
   const triggerDrop = useCallback(() => {
-    if (isDropping || isPaused || screenMode !== 'PLAYING' || synthesizedCompound || activeMCQCompound || showLevelComplete) {
+    if (
+      isDropping ||
+      isPaused ||
+      screenMode !== 'PLAYING' ||
+      activeReactionCompound ||
+      showLevelComplete
+    ) {
       return;
     }
 
-    // Limit chamber to 10 atoms maximum to prevent overcrowding
     if (chamberAtoms.length >= 10) {
       sound.playIncorrect();
+      addFloatingText('Chamber Full! Purge or Zap', 50, 45);
       return;
     }
 
@@ -150,15 +253,15 @@ export default function App() {
       id: `atom-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       elementSymbol: currentElementSymbol,
       x: aimPosition,
-      y: 8, // starts at top of chamber (8%)
-      vy: 1.2,
+      y: 8,
+      vy: 1.4,
       rotation: (Math.random() - 0.5) * 20,
       landed: false,
     };
 
     setFallingAtom(newAtom);
 
-    // Advance spawner: current becomes next, next is newly drawn
+    // Advance spawner
     setCurrentElementSymbol(nextElementSymbol);
     const upcoming = getNextRandomElement(currentLevelNumber, [...chamberAtoms, newAtom]);
     setNextElementSymbol(upcoming);
@@ -167,8 +270,7 @@ export default function App() {
     isDropping,
     isPaused,
     screenMode,
-    synthesizedCompound,
-    activeMCQCompound,
+    activeReactionCompound,
     showLevelComplete,
     chamberAtoms,
     currentElementSymbol,
@@ -177,49 +279,49 @@ export default function App() {
     currentLevelNumber,
   ]);
 
-  // Keyboard controls: ArrowLeft, ArrowRight, ArrowDown, Space, P (pause)
+  // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (screenMode !== 'PLAYING') return;
 
       if (e.key === 'p' || e.key === 'P') {
-        setIsPaused(prev => !prev);
+        setIsPaused((prev) => !prev);
         return;
       }
 
-      if (isPaused || synthesizedCompound || activeMCQCompound || showLevelComplete) return;
+      if (isPaused || activeReactionCompound || showLevelComplete) return;
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setAimPosition(prev => Math.max(12, prev - 6));
+        setAimPosition((prev) => Math.max(12, prev - 6));
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setAimPosition(prev => Math.min(88, prev + 6));
+        setAimPosition((prev) => Math.min(88, prev + 6));
       } else if (e.key === ' ' || e.key === 'ArrowDown') {
         e.preventDefault();
         triggerDrop();
+      } else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        handleSwapElements();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [screenMode, isPaused, synthesizedCompound, activeMCQCompound, showLevelComplete, triggerDrop]);
+  }, [screenMode, isPaused, activeReactionCompound, showLevelComplete, triggerDrop]);
 
-  // Physics animation loop for the falling element
+  // Falling physics animation loop
   useEffect(() => {
     if (!fallingAtom || isPaused) return;
 
     let currentY = fallingAtom.y;
-    let velocity = fallingAtom.vy || 1.2;
-    const gravity = 0.22;
+    let velocity = fallingAtom.vy || 1.4;
+    const gravity = 0.28;
 
-    // Determine target landing floor height based on existing atoms near this horizontal column
-    // Base chamber floor is at ~86%
     let targetFloor = 86;
     for (const landed of chamberAtoms) {
       if (Math.abs(landed.x - fallingAtom.x) < 18) {
-        // Stack on top of closest atom
-        const stackHeight = landed.y - 12;
+        const stackHeight = landed.y - 13;
         if (stackHeight < targetFloor && stackHeight > 20) {
           targetFloor = stackHeight;
         }
@@ -242,20 +344,20 @@ export default function App() {
 
         setFallingAtom(null);
         setIsDropping(false);
-        setChamberAtoms(prev => [...prev, landedAtom]);
+        setChamberAtoms((prev) => [...prev, landedAtom]);
       } else {
-        setFallingAtom(prev => (prev ? { ...prev, y: currentY, vy: velocity } : null));
+        setFallingAtom((prev) => (prev ? { ...prev, y: currentY, vy: velocity } : null));
       }
     }, 20);
 
     return () => clearInterval(interval);
   }, [fallingAtom, isPaused, chamberAtoms]);
 
-  // Reaction evaluation effect: runs whenever chamber atoms change and land
+  // Reaction evaluation effect
   useEffect(() => {
     if (isDropping || isPaused || reactionLockRef.current) return;
 
-    const landedAtoms = chamberAtoms.filter(a => a.landed);
+    const landedAtoms = chamberAtoms.filter((a) => a.landed);
     if (landedAtoms.length < 2) {
       setPartialHints([]);
       return;
@@ -265,16 +367,37 @@ export default function App() {
 
     if (result.formedCompound) {
       reactionLockRef.current = true;
-      sound.playBondFormed();
-
       const comp = result.formedCompound;
       const consumedIds = new Set(result.consumedAtomIds);
 
-      // Award compound points (+100 points)
-      const compoundPoints = 100;
-      setCurrentScore(prev => {
+      // Check combo multiplier
+      const now = Date.now();
+      let combo = 1;
+      if (now - lastReactionTimeRef.current < 18000) {
+        combo = activeCombo + 1;
+        sound.playCombo(combo);
+      } else {
+        sound.playBondFormed();
+      }
+      lastReactionTimeRef.current = now;
+      setActiveCombo(combo);
+
+      // Calculate reaction points with combo
+      const basePoints = 100;
+      const compoundPoints = basePoints * combo;
+
+      // Visual fanfare
+      triggerBurst(50, 50, '#38bdf8');
+      addFloatingText(
+        `+${compoundPoints} ${comp.name.toUpperCase()}!${combo > 1 ? ` (x${combo})` : ''}`,
+        50,
+        35
+      );
+
+      // Award points & stats
+      setCurrentScore((prev) => {
         const nextScore = prev + compoundPoints;
-        setStats(s => ({
+        setStats((s) => ({
           ...s,
           totalScore: nextScore,
           highScore: Math.max(s.highScore, nextScore),
@@ -283,45 +406,69 @@ export default function App() {
         return nextScore;
       });
 
-      // Remove consumed atoms from chamber
-      setChamberAtoms(prev => prev.filter(a => !consumedIds.has(a.id)));
+      // Check 24-Hour Daily Challenge Bounty!
+      const todayKey = getTodayDateKey();
+      if (
+        isDailyChallengeActive &&
+        dailyChallengeTarget &&
+        comp.id === dailyChallengeTarget.id &&
+        !isDailyChallengeCompleted(stats, todayKey)
+      ) {
+        const bountyBonus = 500;
+        sound.playLevelUp();
+        triggerBurst(50, 45, '#f59e0b');
+        addFloatingText(`⭐ DAILY CHALLENGE COMPLETE! +${bountyBonus} PTS`, 50, 25);
+        setCurrentScore((prev) => prev + bountyBonus);
+        setStats((s) => ({
+          ...s,
+          totalScore: s.totalScore + bountyBonus,
+          highScore: Math.max(s.highScore, s.totalScore + bountyBonus),
+          dailyChallengeCompletedDates: [...(s.dailyChallengeCompletedDates || []), todayKey],
+          dailyStreak: (s.dailyStreak || 0) + 1,
+        }));
+      }
 
-      // Trigger compound celebration overlay!
-      setSynthesizedCompound(comp);
+      // Advance recipe target if matched!
+      if (comp.id === activeTargetCompoundId) {
+        setCurrentTargetIndex((prev) => prev + 1);
+      }
+
+      // Remove consumed atoms from chamber
+      setChamberAtoms((prev) => prev.filter((a) => !consumedIds.has(a.id)));
+
+      // Open streamlined celebration modal
+      setActiveReactionCompound(comp);
       setPartialHints([]);
     } else {
       setPartialHints(result.missingElementsForHints);
     }
-  }, [chamberAtoms, isDropping, isPaused, currentLevelNumber]);
+  }, [chamberAtoms, isDropping, isPaused, currentLevelNumber, activeCombo, activeTargetCompoundId]);
 
-  // Proceed from Compound Success to MCQ
-  const handleProceedToMCQ = () => {
-    const comp = synthesizedCompound;
-    setSynthesizedCompound(null);
-    if (comp) {
-      setActiveMCQCompound(comp);
-    }
-  };
-
-  // Complete MCQ Question
-  const handleMCQComplete = (isCorrect: boolean) => {
-    const comp = activeMCQCompound;
-    setActiveMCQCompound(null);
+  // Handle reaction modal finish (quiz complete or skip)
+  const handleReactionModalFinish = (isCorrect: boolean) => {
+    const comp = activeReactionCompound;
+    setActiveReactionCompound(null);
 
     let streakBonus = 0;
-    let newStreak = isCorrect ? stats.currentStreak + 1 : 0;
+    const newStreak = isCorrect ? stats.currentStreak + 1 : 0;
     if (newStreak > 0 && newStreak % 3 === 0) {
-      streakBonus = 100; // Bonus for 3-streak
+      streakBonus = 100;
     }
 
     const questionPoints = isCorrect ? 50 + streakBonus : 0;
 
-    setCurrentScore(prev => {
+    if (isCorrect) {
+      addFloatingText(`+${questionPoints} PTS! 🎯`, 50, 45);
+      triggerBurst(50, 40, '#10b981');
+    }
+
+    setCurrentScore((prev) => {
       const nextScore = prev + questionPoints;
-      setStats(s => {
-        const discovered = comp && !s.discoveredCompounds.includes(comp.id)
-          ? [...s.discoveredCompounds, comp.id]
-          : s.discoveredCompounds;
+      setStats((s) => {
+        const discovered =
+          comp && !s.discoveredCompounds.includes(comp.id)
+            ? [...s.discoveredCompounds, comp.id]
+            : s.discoveredCompounds;
 
         return {
           ...s,
@@ -337,29 +484,24 @@ export default function App() {
       return nextScore;
     });
 
-    // Update level completed count
     const updatedCount = compoundsCreatedThisLevel + 1;
     setCompoundsCreatedThisLevel(updatedCount);
 
-    // Check level completion
     if (updatedCount >= currentLevelConfig.compoundsToComplete) {
       sound.playLevelUp();
       setShowLevelComplete(true);
-      // Unlock next level
       const nextLvl = currentLevelNumber + 1;
       if (nextLvl <= 4) {
-        setStats(s => ({
+        setStats((s) => ({
           ...s,
           unlockedLevels: Array.from(new Set([...s.unlockedLevels, nextLvl])),
         }));
       }
     }
 
-    // Release reaction lock
     reactionLockRef.current = false;
   };
 
-  // Level complete handlers
   const handleNextLevel = () => {
     const nextLvl = currentLevelNumber + 1;
     if (nextLvl <= 4) {
@@ -373,15 +515,15 @@ export default function App() {
     startLevel(currentLevelNumber);
   };
 
-  // Clear Chamber (Purge tool)
   const handleClearChamber = () => {
-    sound.playClick();
+    sound.playZap();
+    triggerBurst(50, 70, '#f43f5e');
+    addFloatingText('Chamber Cleared!', 50, 50);
     setChamberAtoms([]);
     setPartialHints([]);
     reactionLockRef.current = false;
   };
 
-  // Reset progress from settings
   const handleResetProgress = () => {
     const fresh = resetPlayerStats();
     setStats(fresh);
@@ -399,6 +541,7 @@ export default function App() {
           stats={stats}
           onNavigate={(screen) => setScreenMode(screen)}
           onStartLevel={(lvl) => startLevel(lvl)}
+          onStartDailyChallenge={(comp) => startDailyChallenge(comp)}
           onToggleSound={toggleSound}
         />
       )}
@@ -406,16 +549,15 @@ export default function App() {
       {/* 2. ACTIVE GAMEPLAY SCREEN */}
       {screenMode === 'PLAYING' && (
         <div className="min-h-screen w-full flex flex-col items-center justify-between p-2 sm:p-4 max-w-lg mx-auto relative">
-          {/* A. TOP HEADER */}
+          {/* TOP HEADER */}
           <header className="w-full flex items-center justify-between py-2 px-1 border-b border-slate-850 shrink-0">
-            {/* Title & Level Indicator */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
                   sound.playClick();
                   setScreenMode('MAIN_MENU');
                 }}
-                className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
                 title="Return to Menu"
               >
                 <Home className="w-4 h-4" />
@@ -425,7 +567,9 @@ export default function App() {
                   ELEMENT BOND
                 </div>
                 <div className="text-xs font-bold text-white leading-tight mt-0.5">
-                  L{currentLevelNumber}: {currentLevelConfig.subtitle}
+                  {isDailyChallengeActive
+                    ? '24H Daily Challenge'
+                    : `L${currentLevelNumber}: ${currentLevelConfig.subtitle}`}
                 </div>
               </div>
             </div>
@@ -440,13 +584,12 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-1 border-l border-slate-800 pl-2">
-                {/* Pause Button */}
                 <button
                   onClick={() => {
                     sound.playClick();
-                    setIsPaused(prev => !prev);
+                    setIsPaused((prev) => !prev);
                   }}
-                  className={`p-1.5 rounded-lg transition-colors ${
+                  className={`p-1.5 rounded-xl transition-colors ${
                     isPaused ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
                   }`}
                   title={isPaused ? 'Resume' : 'Pause'}
@@ -454,13 +597,12 @@ export default function App() {
                   {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4" />}
                 </button>
 
-                {/* Sound Button */}
                 <button
                   onClick={() => {
                     sound.playClick();
                     toggleSound();
                   }}
-                  className="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  className="p-1.5 rounded-xl bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                   title={stats.soundEnabled ? 'Mute' : 'Unmute'}
                 >
                   {stats.soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4" />}
@@ -469,26 +611,40 @@ export default function App() {
             </div>
           </header>
 
-          {/* Target Mission Progress Bar */}
-          <div className="w-full my-1.5 px-2 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5 text-slate-300">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Goal: {compoundsCreatedThisLevel}/{currentLevelConfig.compoundsToComplete} Compounds</span>
-            </div>
-            {stats.currentStreak >= 2 && (
-              <span className="text-amber-400 font-mono font-bold text-[11px] flex items-center gap-0.5">
-                <Flame className="w-3.5 h-3.5" />
-                <span>{stats.currentStreak} Streak</span>
+          {/* 24-HOUR DAILY CHALLENGE BANNER */}
+          {isDailyChallengeActive && dailyChallengeTarget && (
+            <div className="w-full mt-1.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-amber-500/25 via-amber-500/15 to-amber-500/25 border border-amber-400/50 flex items-center justify-between text-xs text-amber-200 shadow-md">
+              <div className="flex items-center gap-2 truncate">
+                <Sparkles className="w-4 h-4 text-amber-400 shrink-0 animate-spin" />
+                <span className="font-black text-white text-[11px] uppercase tracking-wide">
+                  Daily Bounty:
+                </span>
+                <span className="font-bold text-amber-300 truncate">{dailyChallengeTarget.name}</span>
+                <span className="font-mono text-cyan-300 font-bold">
+                  ({dailyChallengeTarget.formattedFormula})
+                </span>
+              </div>
+              <span className="font-mono font-black text-amber-300 bg-amber-950/90 px-2 py-0.5 rounded-lg border border-amber-400/40 text-[11px] shrink-0">
+                +500 PTS
               </span>
-            )}
+            </div>
+          )}
+
+          {/* VISUAL RECIPE TARGET BAR */}
+          <div className="w-full mt-1 shrink-0">
+            <RecipeTargetBar
+              targetCompoundId={activeTargetCompoundId}
+              chamberAtoms={chamberAtoms}
+              onOpenDetails={(compound) => setInspectCompound(compound)}
+            />
           </div>
 
-          {/* B. ELEMENT SPAWNING & PREVIEW AREA */}
-          <div className="w-full flex items-center justify-center gap-4 py-1 shrink-0">
-            {/* Current Element Tile in Spawner */}
+          {/* ELEMENT SPAWNING & PREVIEW AREA */}
+          <div className="w-full flex items-center justify-center gap-3 py-1 shrink-0">
+            {/* Active Reagent Tile */}
             <div className="flex flex-col items-center">
-              <span className="text-[10px] uppercase font-bold text-cyan-400 tracking-wider mb-1 flex items-center gap-1">
-                <span>Active Reagent</span>
+              <span className="text-[10px] uppercase font-bold text-cyan-400 tracking-wider mb-1">
+                Active Drop
               </span>
               <ElementTile
                 element={currentElementSymbol}
@@ -496,6 +652,16 @@ export default function App() {
                 highlight={!isDropping && !isPaused}
               />
             </div>
+
+            {/* Tactical Swap Button */}
+            <button
+              onClick={handleSwapElements}
+              title="Swap current and next element (or press S)"
+              className="p-2 sm:p-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-400 shadow-md transition-all active:scale-90 flex flex-col items-center gap-0.5"
+            >
+              <Repeat className="w-4 h-4 stroke-[2.5]" />
+              <span className="text-[8px] font-bold uppercase tracking-wider">Swap</span>
+            </button>
 
             {/* Next Element Preview */}
             <div className="flex flex-col items-center">
@@ -508,7 +674,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* C. REACTION CHAMBER */}
+          {/* REACTION CHAMBER */}
           <div className="w-full my-auto flex flex-col items-center">
             <ReactionChamber
               atoms={chamberAtoms}
@@ -518,14 +684,18 @@ export default function App() {
               fallingAtom={fallingAtom}
               partialHints={partialHints}
               onClearChamber={handleClearChamber}
+              onZapAtom={handleZapAtom}
+              onMagnetPull={handleMagnetPull}
               isPaused={isPaused}
-              disabled={isDropping || !!synthesizedCompound || !!activeMCQCompound || showLevelComplete}
+              disabled={isDropping || !!activeReactionCompound || showLevelComplete}
+              floatingScores={floatingScores}
+              burstParticles={burstParticles}
+              activeCombo={activeCombo}
             />
           </div>
 
-          {/* D. DROP CONTROL & ACTIONS */}
-          <div className="w-full max-w-sm mt-2 flex flex-col items-center gap-2 shrink-0">
-            {/* Horizontal Aimer Slider */}
+          {/* DROP CONTROLLER */}
+          <div className="w-full max-w-sm mt-1.5 flex flex-col items-center gap-2 shrink-0">
             <div className="w-full px-2 flex items-center gap-2">
               <span className="text-[11px] font-mono text-slate-500">Aim:</span>
               <input
@@ -539,10 +709,9 @@ export default function App() {
               />
             </div>
 
-            {/* Large DROP Button */}
             <button
               onClick={triggerDrop}
-              disabled={isDropping || isPaused || !!synthesizedCompound || !!activeMCQCompound || showLevelComplete}
+              disabled={isDropping || isPaused || !!activeReactionCompound || showLevelComplete}
               className={`w-full py-3.5 px-6 rounded-2xl font-black text-base sm:text-lg tracking-wider uppercase flex items-center justify-center gap-2 shadow-xl transition-all ${
                 isDropping || isPaused
                   ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
@@ -554,11 +723,11 @@ export default function App() {
             </button>
           </div>
 
-          {/* Pause Overlay if active */}
+          {/* Pause Overlay */}
           {isPaused && (
             <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-              <div className="p-6 rounded-2xl bg-slate-900 border border-slate-700 text-center max-w-xs shadow-2xl">
-                <h3 className="text-xl font-bold text-white mb-2">Experiment Paused</h3>
+              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-700 text-center max-w-xs shadow-2xl">
+                <h3 className="text-xl font-bold text-white mb-2">Game Paused</h3>
                 <p className="text-xs text-slate-400 mb-4">
                   Take a breath. Press resume when you are ready to continue bonding!
                 </p>
@@ -583,19 +752,12 @@ export default function App() {
             </div>
           )}
 
-          {/* Compound Formed Celebration Overlay */}
-          {synthesizedCompound && (
-            <CompoundSuccessOverlay
-              compound={synthesizedCompound}
-              onProceedToMCQ={handleProceedToMCQ}
-            />
-          )}
-
-          {/* Multiple Choice Question Modal */}
-          {activeMCQCompound && (
-            <MCQModal
-              compound={activeMCQCompound}
-              onAnswerComplete={handleMCQComplete}
+          {/* Compound Reaction Celebration Modal */}
+          {activeReactionCompound && (
+            <CompoundReactionModal
+              compound={activeReactionCompound}
+              currentStreak={stats.currentStreak}
+              onFinish={handleReactionModalFinish}
             />
           )}
 
@@ -652,6 +814,70 @@ export default function App() {
           onResetProgress={handleResetProgress}
           onClose={() => setScreenMode('MAIN_MENU')}
         />
+      )}
+
+      {/* 8. SCIENTIFIC COMPOUND INSPECTOR MODAL */}
+      {inspectCompound && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-sm rounded-3xl bg-slate-900 border-2 border-cyan-500/40 p-5 shadow-2xl relative text-left">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/80 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
+                Scientific Formula Sheet
+              </span>
+              <button
+                onClick={() => setInspectCompound(null)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            <h3 className="text-xl font-black text-white mt-1">
+              {inspectCompound.name}
+            </h3>
+            <div className="text-sm font-mono font-bold text-cyan-300">
+              {inspectCompound.formattedFormula}
+            </div>
+
+            {/* Molecule structure visual */}
+            <div className="my-3 flex justify-center">
+              <MoleculeVisualizer compound={inspectCompound} size="sm" />
+            </div>
+
+            {/* Balanced Equation */}
+            <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 mb-2.5 font-mono text-xs">
+              <span className="text-[10px] text-slate-500 uppercase block font-bold">Balanced Equation</span>
+              <span className="text-emerald-400 font-bold">{inspectCompound.balancedEquation}</span>
+            </div>
+
+            {/* PubChem Scientific Properties */}
+            <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 text-[11px] font-mono space-y-1 mb-3 text-slate-300">
+              <div className="flex justify-between">
+                <span className="text-slate-500">PubChem CID:</span>
+                <span className="text-cyan-400 font-bold">{inspectCompound.pubchemCid || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Molecular Mass:</span>
+                <span className="text-slate-200">{inspectCompound.molecularWeight ? `${inspectCompound.molecularWeight} g/mol` : 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">SMILES:</span>
+                <span className="text-amber-300 truncate max-w-[170px]">{inspectCompound.canonicalSmiles || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Bond Type:</span>
+                <span className="text-emerald-400">{inspectCompound.bondingType}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setInspectCompound(null)}
+              className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-colors"
+            >
+              Back to Laboratory
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

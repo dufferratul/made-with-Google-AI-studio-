@@ -16,6 +16,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 1,
     energyCondition: 'Ignition spark initiates rapid exothermic combustion of H₂ and O₂.',
     structureVisual: 'water',
+    pubchemCid: 962,
+    canonicalSmiles: 'O',
+    molecularWeight: 18.015,
+    iupacName: 'oxidane',
     mcqQuestions: [
       {
         id: 'water-1',
@@ -61,6 +65,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 1,
     energyCondition: 'Vigorous exothermic reaction releases heat and bright yellow light as electrons transfer.',
     structureVisual: 'nacl',
+    pubchemCid: 5234,
+    canonicalSmiles: '[Na+].[Cl-]',
+    molecularWeight: 58.44,
+    iupacName: 'sodium;chloride',
     mcqQuestions: [
       {
         id: 'nacl-1',
@@ -99,6 +107,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 1,
     energyCondition: 'Complete combustion of carbon in excess oxygen with activation energy.',
     structureVisual: 'co2',
+    pubchemCid: 280,
+    canonicalSmiles: 'O=C=O',
+    molecularWeight: 44.009,
+    iupacName: 'carbon dioxide',
     mcqQuestions: [
       {
         id: 'co2-1',
@@ -139,6 +151,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 2,
     energyCondition: 'Haber process: 400-450°C, ~200 atm pressure, iron catalyst.',
     structureVisual: 'ammonia',
+    pubchemCid: 222,
+    canonicalSmiles: 'N',
+    molecularWeight: 17.031,
+    iupacName: 'azane',
     mcqQuestions: [
       {
         id: 'nh3-1',
@@ -177,6 +193,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 2,
     energyCondition: 'Forms naturally by anaerobic microbial methanogenesis or catalytic methanation.',
     structureVisual: 'methane',
+    pubchemCid: 297,
+    canonicalSmiles: 'C',
+    molecularWeight: 16.043,
+    iupacName: 'methane',
     mcqQuestions: [
       {
         id: 'ch4-1',
@@ -208,6 +228,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 2,
     energyCondition: 'UV light or spark initiates an explosive free-radical chain reaction.',
     structureVisual: 'hcl',
+    pubchemCid: 313,
+    canonicalSmiles: 'Cl',
+    molecularWeight: 36.46,
+    iupacName: 'chlorane',
     mcqQuestions: [
       {
         id: 'hcl-1',
@@ -239,6 +263,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 2,
     energyCondition: 'Incomplete combustion in limited oxygen supply.',
     structureVisual: 'co',
+    pubchemCid: 281,
+    canonicalSmiles: '[C-]#[O+]',
+    molecularWeight: 28.010,
+    iupacName: 'carbon monoxide',
     mcqQuestions: [
       {
         id: 'co-1',
@@ -272,6 +300,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 3,
     energyCondition: 'Igniting magnesium ribbon in air emits brilliant white light and intense heat.',
     structureVisual: 'mgo',
+    pubchemCid: 14792,
+    canonicalSmiles: '[Mg+2].[O-2]',
+    molecularWeight: 40.304,
+    iupacName: 'magnesium;oxygen(2-)',
     mcqQuestions: [
       {
         id: 'mgo-1',
@@ -303,6 +335,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 3,
     energyCondition: 'Combustion of sulfur in air or roasting sulfide ores.',
     structureVisual: 'so2',
+    pubchemCid: 1119,
+    canonicalSmiles: 'O=S=O',
+    molecularWeight: 64.06,
+    iupacName: 'sulfur dioxide',
     mcqQuestions: [
       {
         id: 'so2-1',
@@ -334,6 +370,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 3,
     energyCondition: 'Extremely exothermic dissolution and synthesis.',
     structureVisual: 'naoh',
+    pubchemCid: 14798,
+    canonicalSmiles: '[OH-].[Na+]',
+    molecularWeight: 39.997,
+    iupacName: 'sodium;hydroxide',
     mcqQuestions: [
       {
         id: 'naoh-1',
@@ -365,6 +405,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 3,
     energyCondition: 'Synthesized industrially via the anthraquinone autoxidation process.',
     structureVisual: 'h2o2',
+    pubchemCid: 784,
+    canonicalSmiles: 'OO',
+    molecularWeight: 34.015,
+    iupacName: 'dioxidane',
     mcqQuestions: [
       {
         id: 'h2o2-1',
@@ -398,6 +442,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 4,
     energyCondition: 'Precipitates readily when aqueous calcium ions meet dissolved carbonate ions.',
     structureVisual: 'caco3',
+    pubchemCid: 10112,
+    canonicalSmiles: '[Ca+2].[O-]C(=O)[O-]',
+    molecularWeight: 100.09,
+    iupacName: 'calcium;carbonate',
     mcqQuestions: [
       {
         id: 'caco3-1',
@@ -429,6 +477,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 4,
     energyCondition: 'Extreme exothermic reaction between alkali metal and halogen.',
     structureVisual: 'generic',
+    pubchemCid: 224409,
+    canonicalSmiles: '[Li+].[F-]',
+    molecularWeight: 25.939,
+    iupacName: 'lithium;fluoride',
     mcqQuestions: [
       {
         id: 'lif-1',
@@ -460,6 +512,10 @@ export const COMPOUNDS: Compound[] = [
     difficultyLevel: 4,
     energyCondition: 'Spontaneous combustion of heated potassium in chlorine gas.',
     structureVisual: 'generic',
+    pubchemCid: 4873,
+    canonicalSmiles: '[K+].[Cl-]',
+    molecularWeight: 74.551,
+    iupacName: 'potassium;chloride',
     mcqQuestions: [
       {
         id: 'kcl-1',

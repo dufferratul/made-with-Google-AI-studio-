@@ -15,6 +15,8 @@ export const DEFAULT_STATS: PlayerStats = {
   currentStreak: 0,
   highestStreak: 0,
   soundEnabled: true,
+  dailyChallengeCompletedDates: [],
+  dailyStreak: 0,
 };
 
 export function loadPlayerStats(): PlayerStats {
@@ -30,6 +32,8 @@ export function loadPlayerStats(): PlayerStats {
       unlockedLevels: parsed.unlockedLevels || [1],
       discoveredCompounds: parsed.discoveredCompounds || [],
       discoveredElements: parsed.discoveredElements || ['H'],
+      dailyChallengeCompletedDates: parsed.dailyChallengeCompletedDates || [],
+      dailyStreak: parsed.dailyStreak || 0,
     };
   } catch (err) {
     console.error('Failed to load player stats from localStorage:', err);
