@@ -26,6 +26,7 @@ import { LearnChemistryModal } from './components/LearnChemistryModal';
 import { HowToPlayModal } from './components/HowToPlayModal';
 import { SettingsModal } from './components/SettingsModal';
 import { LevelCompleteModal } from './components/LevelCompleteModal';
+import { ChemAIAssistantModal } from './components/ChemAIAssistantModal';
 
 import {
   Volume2,
@@ -38,6 +39,7 @@ import {
   ArrowDown,
   Repeat,
   Zap,
+  Bot,
 } from 'lucide-react';
 
 export default function App() {
@@ -99,6 +101,10 @@ export default function App() {
   const [burstParticles, setBurstParticles] = useState<ParticleEffect[]>([]);
   const [activeCombo, setActiveCombo] = useState<number>(1);
   const lastReactionTimeRef = useRef<number>(0);
+
+  // Global ChemAI Tutor Assistant state
+  const [showGlobalAI, setShowGlobalAI] = useState<boolean>(false);
+  const [globalAIInitialQuestion, setGlobalAIInitialQuestion] = useState<string | undefined>(undefined);
 
   // Prevent duplicate reaction evaluations
   const reactionLockRef = useRef<boolean>(false);
@@ -543,6 +549,10 @@ export default function App() {
           onStartLevel={(lvl) => startLevel(lvl)}
           onStartDailyChallenge={(comp) => startDailyChallenge(comp)}
           onToggleSound={toggleSound}
+          onOpenAI={() => {
+            setGlobalAIInitialQuestion(undefined);
+            setShowGlobalAI(true);
+          }}
         />
       )}
 
@@ -583,7 +593,21 @@ export default function App() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-1 border-l border-slate-800 pl-2">
+              <div className="flex items-center gap-1.5 border-l border-slate-800 pl-2">
+                {/* AI Tutor Help Button */}
+                <button
+                  onClick={() => {
+                    sound.playClick();
+                    setGlobalAIInitialQuestion(undefined);
+                    setShowGlobalAI(true);
+                  }}
+                  className="px-2 py-1 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm shadow-cyan-500/20"
+                  title="Ask ChemAI Tutor"
+                >
+                  <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="text-[11px] font-bold">AI Help</span>
+                </button>
+
                 <button
                   onClick={() => {
                     sound.playClick();
@@ -774,6 +798,20 @@ export default function App() {
               onReturnMenu={() => setScreenMode('MAIN_MENU')}
             />
           )}
+
+          {/* Floating AI Helper Quick Button during gameplay */}
+          <button
+            onClick={() => {
+              sound.playClick();
+              setGlobalAIInitialQuestion('What does (g) on the brackets mean?');
+              setShowGlobalAI(true);
+            }}
+            className="fixed bottom-24 right-3 sm:right-6 z-30 px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-850 border border-cyan-400/50 text-cyan-300 text-xs font-bold shadow-lg shadow-cyan-500/20 backdrop-blur-sm flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            title="Ask ChemAI for help"
+          >
+            <Bot className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span>AI Help ✨</span>
+          </button>
         </div>
       )}
 
@@ -879,6 +917,21 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* 9. GLOBAL CHEMAI TUTOR MODAL */}
+      <ChemAIAssistantModal
+        isOpen={showGlobalAI}
+        onClose={() => setShowGlobalAI(false)}
+        context={{
+          levelNumber: currentLevelNumber,
+          compoundName: COMPOUND_MAP.get(activeTargetCompoundId)?.name,
+          formula: COMPOUND_MAP.get(activeTargetCompoundId)?.formattedFormula,
+          balancedEquation: COMPOUND_MAP.get(activeTargetCompoundId)?.balancedEquation,
+          bondingType: COMPOUND_MAP.get(activeTargetCompoundId)?.bondingType,
+          chamberAtoms: chamberAtoms.map((a) => a.elementSymbol),
+        }}
+        initialQuestion={globalAIInitialQuestion}
+      />
     </div>
   );
 }

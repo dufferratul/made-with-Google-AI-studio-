@@ -5,19 +5,13 @@ import {
   getTimeUntilMidnight,
   isDailyChallengeCompleted,
 } from '../utils/dailyChallenge';
-import { MoleculeVisualizer } from './MoleculeVisualizer';
 import { sound } from '../utils/audio';
 import {
-  Sparkles,
+  FlaskConical,
   Clock,
-  Award,
   CheckCircle2,
   Play,
-  Zap,
   Info,
-  Flame,
-  ArrowRight,
-  FlaskConical,
 } from 'lucide-react';
 
 interface DailyChallengeCardProps {
@@ -44,114 +38,64 @@ export const DailyChallengeCard: React.FC<DailyChallengeCardProps> = ({
   }, []);
 
   return (
-    <div className="w-full my-3 p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-950/95 border-2 border-amber-500/40 shadow-xl shadow-amber-500/10 text-left relative overflow-hidden transition-all">
-      {/* Ambient warm alchemical glow */}
-      <div className="absolute -top-12 -right-12 w-36 h-36 bg-amber-500/15 rounded-full blur-2xl pointer-events-none" />
+    <div className="w-full mt-2.5 p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-slate-900/90 via-slate-900/95 to-amber-950/20 border border-amber-500/35 shadow-md text-left relative overflow-hidden transition-all">
+      {/* Subtle warm accent line */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/60 via-amber-400 to-transparent" />
 
-      {/* Top Header Row */}
-      <div className="flex items-center justify-between gap-2 mb-2.5">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 shadow-sm">
-            <FlaskConical className="w-4 h-4 stroke-[2.5]" />
-          </div>
-          <div>
-            <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-1.5 leading-none">
-              <span>Daily Chemistry Challenge</span>
-            </h3>
-            <span className="text-[10px] font-semibold text-amber-400/90 tracking-wide uppercase">
-              24-Hour Special Bounty
-            </span>
-          </div>
+      {/* Top micro bar: Title, Bonus, and Countdown */}
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <FlaskConical className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span className="text-xs font-bold text-white tracking-tight truncate">
+            Daily Challenge
+          </span>
+          <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-400/30 text-[10px] font-mono font-bold text-amber-300 shrink-0">
+            +{info.bonusPoints} PTS
+          </span>
         </div>
 
-        {/* Live Countdown Badge */}
-        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-950/80 border border-amber-500/30 text-[10px] sm:text-xs font-mono font-bold text-amber-300">
+        <div className="flex items-center gap-1 text-[10px] font-mono font-medium text-amber-300/90 shrink-0">
           <Clock className="w-3 h-3 text-amber-400 animate-pulse" />
           <span>{timeLeft}</span>
         </div>
       </div>
 
-      {/* Compound Target Spotlight */}
-      <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between gap-3 mb-3">
-        <div className="flex-1">
-          <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-            Today&apos;s Target Molecule
-          </div>
-          <div className="text-lg sm:text-xl font-black text-white flex items-center gap-2 mt-0.5">
-            <span>{compound.name}</span>
-            <span className="font-mono text-cyan-400 text-sm sm:text-base bg-cyan-950/80 px-2 py-0.5 rounded-lg border border-cyan-500/30">
+      {/* Main compact body */}
+      <div className="flex items-center justify-between gap-2 bg-slate-950/70 p-2 rounded-xl border border-slate-800/80">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-bold text-slate-100">{compound.name}</span>
+            <span className="font-mono text-cyan-400 text-xs font-bold bg-cyan-950/70 px-1.5 py-0.5 rounded border border-cyan-500/30">
               {compound.formattedFormula}
             </span>
           </div>
-          <div className="text-[11px] font-mono text-emerald-400 mt-1 truncate">
-            {compound.balancedEquation}
-          </div>
-        </div>
 
-        {/* Mini Molecule Graphic Preview */}
-        <div className="shrink-0 scale-90">
-          <MoleculeVisualizer compound={compound} size="sm" animate={false} />
-        </div>
-      </div>
-
-      {/* Required Ingredients Breakdown */}
-      <div className="flex items-center justify-between gap-2 mb-3 px-1 text-xs">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] font-semibold text-slate-400">Recipe:</span>
-          {Object.entries(compound.requiredElements).map(([symbol, count]) => (
-            <span
-              key={symbol}
-              className="px-2 py-0.5 bg-slate-800 text-amber-300 rounded-lg font-mono font-bold text-[11px] border border-slate-700"
+          <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400 font-mono truncate">
+            <span className="text-slate-500">Mix:</span>
+            {Object.entries(compound.requiredElements).map(([symbol, count]) => (
+              <span
+                key={symbol}
+                className="px-1 py-0.2 rounded bg-slate-850 text-amber-300 border border-slate-700/60 font-semibold"
+              >
+                {count}×{symbol}
+              </span>
+            ))}
+            <button
+              onClick={() => setShowScientificDetails(!showScientificDetails)}
+              className="ml-1 text-[10px] text-slate-400 hover:text-cyan-300 underline cursor-pointer"
+              title="Toggle PubChem details"
             >
-              {count}× {symbol}
-            </span>
-          ))}
-        </div>
-
-        <button
-          onClick={() => setShowScientificDetails(!showScientificDetails)}
-          className="text-[10px] text-slate-400 hover:text-cyan-300 flex items-center gap-0.5 underline transition-colors"
-        >
-          <Info className="w-3 h-3" />
-          <span>{showScientificDetails ? 'Hide Data' : 'PubChem Data'}</span>
-        </button>
-      </div>
-
-      {/* Science Skill Data Inspector Drawer */}
-      {showScientificDetails && (
-        <div className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-[11px] font-mono space-y-1 mb-3 animate-fadeIn text-slate-300">
-          <div className="flex justify-between">
-            <span className="text-slate-500">PubChem CID:</span>
-            <span className="text-cyan-400 font-bold">{compound.pubchemCid || 'N/A'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-500">Molecular Weight:</span>
-            <span className="text-slate-200">{compound.molecularWeight ? `${compound.molecularWeight} g/mol` : 'N/A'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-500">Canonical SMILES:</span>
-            <span className="text-amber-300 truncate max-w-[180px]">{compound.canonicalSmiles || 'N/A'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-500">Bonding Type:</span>
-            <span className="text-emerald-400">{compound.bondingType}</span>
+              <Info className="w-3 h-3 inline mr-0.5" />
+              {showScientificDetails ? 'Hide' : 'Info'}
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Reward & Action Row */}
-      <div className="flex items-center justify-between gap-3 pt-1">
-        <div className="flex items-center gap-1.5">
-          <Award className="w-4 h-4 text-amber-400 shrink-0" />
-          <span className="text-xs font-black text-amber-300 tracking-wide font-mono">
-            +{info.bonusPoints} PTS REWARD
-          </span>
-        </div>
-
+        {/* Action Button */}
         {completed ? (
-          <div className="flex items-center gap-1.5 px-3 py-2 bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 rounded-xl text-xs font-bold">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>Completed Today!</span>
+          <div className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Done</span>
           </div>
         ) : (
           <button
@@ -159,13 +103,22 @@ export const DailyChallengeCard: React.FC<DailyChallengeCardProps> = ({
               sound.playClick();
               onStartDailyChallenge(compound);
             }}
-            className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm tracking-wide flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition-transform hover:scale-105 active:scale-95"
+            className="shrink-0 py-1.5 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md shadow-amber-500/20 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
           >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>PLAY CHALLENGE</span>
+            <Play className="w-3 h-3 fill-current" />
+            <span>Play Bounty</span>
           </button>
         )}
       </div>
+
+      {/* Collapsible Scientific Details */}
+      {showScientificDetails && (
+        <div className="mt-1.5 p-2 rounded-lg bg-slate-950/90 border border-slate-800 text-[10px] font-mono grid grid-cols-2 gap-x-2 gap-y-0.5 text-slate-300 animate-fadeIn">
+          <div><span className="text-slate-500">PubChem:</span> <span className="text-cyan-400">{compound.pubchemCid || 'N/A'}</span></div>
+          <div><span className="text-slate-500">Weight:</span> <span className="text-slate-200">{compound.molecularWeight ? `${compound.molecularWeight} g/mol` : 'N/A'}</span></div>
+          <div className="col-span-2 truncate"><span className="text-slate-500">Equation:</span> <span className="text-emerald-400">{compound.balancedEquation}</span></div>
+        </div>
+      )}
     </div>
   );
 };

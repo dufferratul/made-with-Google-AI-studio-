@@ -134,6 +134,21 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({
               </p>
             </div>
           </div>
+
+          {/* Step 6: ChemAI Assistant */}
+          <div className="p-4 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-mono font-bold shrink-0">
+              6
+            </div>
+            <div>
+              <h3 className="font-bold text-cyan-300 text-sm mb-1 flex items-center gap-1.5">
+                <span>ChemAI Lab Assistant & Explainer</span>
+              </h3>
+              <p className="text-slate-300 leading-relaxed">
+                Stuck on a question or don&apos;t know what <strong>(g)</strong> in brackets means? Tap the <strong>AI Help</strong> button on the header or during MCQs. ChemAI instantly explains notations, bonding mechanisms, and balanced reactions to help you learn faster!
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}

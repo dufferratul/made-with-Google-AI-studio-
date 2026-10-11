@@ -164,6 +164,37 @@ export const LearnChemistryModal: React.FC<LearnChemistryModalProps> = ({ onClos
                 </div>
               </div>
 
+              {/* State Symbols in Chemical Equations */}
+              <div className="p-4 rounded-xl bg-cyan-950/40 border border-cyan-500/30">
+                <h3 className="text-base font-bold text-cyan-300 mb-2">
+                  Physical State Symbols in Equations: (s), (l), (g), (aq)
+                </h3>
+                <p className="mb-3 text-xs sm:text-sm text-slate-300">
+                  Letters in parentheses following a chemical formula indicate the state of matter under the reaction conditions:
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span className="text-cyan-400 font-bold block text-sm">(g) Gas</span>
+                    <span className="text-[11px] text-slate-400 font-sans">Molecules move freely (e.g. O₂, Cl₂, CO₂)</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span className="text-emerald-400 font-bold block text-sm">(s) Solid</span>
+                    <span className="text-[11px] text-slate-400 font-sans">Rigid crystal/lattice (e.g. Na, NaCl salt)</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span className="text-blue-400 font-bold block text-sm">(l) Liquid</span>
+                    <span className="text-[11px] text-slate-400 font-sans">Pure fluid (e.g. liquid water H₂O)</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span className="text-purple-400 font-bold block text-sm">(aq) Aqueous</span>
+                    <span className="text-[11px] text-slate-400 font-sans">Dissolved in water (e.g. salt water)</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs font-mono text-slate-400">
+                  Example: <span className="text-emerald-300 font-bold">2Na(s) + Cl₂(g) → 2NaCl(s)</span> (solid metal + gas = solid table salt)
+                </div>
+              </div>
+
               <div className="p-4 rounded-xl bg-slate-850 border border-slate-800">
                 <h3 className="text-base font-bold text-amber-300 mb-1 flex items-center gap-1.5">
                   <Flame className="w-4 h-4" />
